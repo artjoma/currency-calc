@@ -28,10 +28,6 @@ public class CurrencyPairService {
     private final CurrencyPairRepo currencyPairRepo;
     private final CurrencyService currencyService;
 
-    public BigDecimal calculateAmount(long reqId, BigDecimal amount, CurrencyPair pair) {
-        return BigDecimal.ZERO;
-    }
-
     @PostConstruct
     //stop application initialization if exception happens
     public void init() throws Exception {
