@@ -1,10 +1,11 @@
 package io.artyom.currencycalc.api.http;
 
-import io.artyom.currencycalc.entity.CurrencyPair;
+import io.artyom.currencycalc.api.converters.CurrencyPairConverter;
+import io.artyom.currencycalc.entity.CurrencyPairEntity;
 import io.artyom.currencycalc.service.CurrencyPairService;
 import io.artyom.currencycalc.service.CurrencyService;
+import io.artyom.currencycalc.service.FeesService;
 import io.artyom.currencycalc.util.AppException;
-import io.artyom.currencycalc.util.AppExceptionKind;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,6 +25,7 @@ public class ApiController {
 
     private final CurrencyPairService currencyPairService;
     private final CurrencyService currencyService;
+    private final FeesService feesService;
 
     @GetMapping("/currencies")
     public GetCurrenciesResp getAllCurrencies() {
@@ -33,8 +35,11 @@ public class ApiController {
     @GetMapping("/pairs")
     public GetCurrencyPairsResp allFees() {
         var pairs = currencyPairService.findAll();
-        var sortedPairs = pairs.stream().filter(pair -> pair.getFee().compareTo(BigDecimal.ZERO) > 0)
-                .sorted(Comparator.comparing(CurrencyPair::getFee))
+        var sortedPairs = pairs.stream()
+                .filter(pair -> pair.getFee() != null)
+                .filter(pair -> pair.getFee().getFee().compareTo(BigDecimal.ZERO) > 0)
+                .sorted(Comparator.comparing(CurrencyPairEntity::getName))
+                .map(CurrencyPairConverter::convert)
                 .collect(Collectors.toList());
 
         return new GetCurrencyPairsResp(sortedPairs);
@@ -42,23 +47,17 @@ public class ApiController {
 
     @PutMapping("/fees")
     public SuccessResp setFee(@RequestBody SetFeeReq req) throws AppException{
-        currencyPairService.setFee(validatePairName(req.getPairName()), req.getFeeAmount(), req.getReqId());
+        feesService.setFee(req.getPairName(), req.getFeeAmount(), req.getReqId());
         return new SuccessResp();
     }
 
     @PostMapping("/conversion")
     public ConversationResp conversion(@RequestBody ConversionReq req) throws AppException{
         var result = currencyPairService.
-                conversion(validatePairName(req.getPairName()), req.getAmount(), req.getReqId());
+                conversion(req.getPairName(), req.getAmount(), req.getReqId());
         return new ConversationResp(result);
     }
 
-    private CurrencyPair validatePairName(String pairName) throws AppException{
-        var pairOpt = currencyPairService.get(pairName);
-        if (pairOpt.isPresent()){
-            return pairOpt.get();
-        }else{
-            throw new AppException(AppExceptionKind.CURRENCY_PAIR_NOT_FOUND);
-        }
-    }
+
+
 }

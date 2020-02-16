@@ -1,44 +1,21 @@
 package io.artyom.currencycalc.repo;
 
-import io.artyom.currencycalc.entity.CurrencyPair;
+import io.artyom.currencycalc.entity.CurrencyPairEntity;
+import io.artyom.currencycalc.util.AppException;
+import io.artyom.currencycalc.util.AppExceptionKind;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import javax.annotation.PostConstruct;
-import java.util.Collection;
-import java.util.Currency;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @Repository
-public class CurrencyPairRepo {
-    //in normal case should be replaced to DB|Nosql+cache
-    //foe this example used simple im mem Map
-    //currency pair storage
-    private Map<String, CurrencyPair> storage;
+public interface CurrencyPairRepo extends JpaRepository <CurrencyPairEntity, Long> {
 
-    @PostConstruct
-    public void init(){
-        storage = new HashMap<>(5000);
+    default CurrencyPairEntity get(String pairName) throws AppException{
+        return getByName(pairName).orElseThrow(() -> new AppException(AppExceptionKind.CURRENCY_PAIR_NOT_FOUND));
     }
 
-    public Optional<CurrencyPair> get(String currencyPairName){
-        return Optional.ofNullable(storage.getOrDefault(currencyPairName, null));
-    }
+    Optional<CurrencyPairEntity> getByName(String name);
 
-    public Optional<CurrencyPair> get(Currency base,Currency quote){
-        return get(CurrencyPair.name(base, quote));
-    }
 
-    public void add(CurrencyPair pair){
-        storage.put(pair.getName(), pair);
-    }
-
-    public Collection<CurrencyPair> findAll(){
-        return storage.values();
-    }
-
-    public int count(){
-        return storage.size();
-    }
 }

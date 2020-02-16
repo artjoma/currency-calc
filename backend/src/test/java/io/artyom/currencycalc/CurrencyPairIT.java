@@ -6,14 +6,18 @@ import io.artyom.currencycalc.api.http.ErrResp;
 import io.artyom.currencycalc.api.http.GetCurrenciesResp;
 import io.artyom.currencycalc.api.http.GetCurrencyPairsResp;
 import io.artyom.currencycalc.api.http.SetFeeReq;
-import io.artyom.currencycalc.entity.CurrencyPair;
+import io.artyom.currencycalc.dto.CurrencyPairDto;
 import io.artyom.currencycalc.util.AppExceptionKind;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Currency;
+
+import static org.assertj.core.api.Assertions.tuple;
+import static org.junit.jupiter.api.Assertions.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 //currency pair integration tests
 public class CurrencyPairIT extends AbstractCurrencyCalcApplicationTest{
@@ -24,37 +28,43 @@ public class CurrencyPairIT extends AbstractCurrencyCalcApplicationTest{
     public void getCurrencies(){
         GetCurrenciesResp response = restTemplate.getForObject(getApiURI() + "currencies", GetCurrenciesResp.class);
         var currencies = response.getResult();
-        Assert.assertTrue(!currencies.isEmpty());
-        Assert.assertNull(response.getErr());
-        Assert.assertTrue(currencies.contains(Currency.getInstance("EUR")));
+        assertTrue(!currencies.isEmpty());
+        assertNull(response.getErr());
+        assertTrue(currencies.contains(Currency.getInstance("EUR")));
     }
 
     @Test
     public void getPairs(){
         GetCurrencyPairsResp response = restTemplate.getForObject(getApiURI() + "pairs", GetCurrencyPairsResp.class);
         var pairs = response.getResult();
-        Assert.assertTrue(!pairs.isEmpty());
-        Assert.assertNull(response.getErr());
-        CurrencyPair pair = pairs.get(0);
-        Assert.assertNotNull(pair.getBase());
-        Assert.assertNotNull(pair.getQuote());
-        Assert.assertNotNull(pair.getName());
-        Assert.assertNotNull(pair.getRate());
-        Assert.assertNotNull(pair.getFee());
+        assertTrue(!pairs.isEmpty());
+        assertNull(response.getErr());
+        assertThat(pairs)
+                .hasSizeGreaterThan(0)
+                .extracting(CurrencyPairDto::getName)
+                .containsExactlyInAnyOrder("EURUSD");
+
+        var pair = pairs.get(0);
+        assertNotNull(pair.getBase());
+        assertNotNull(pair.getQuote());
+        assertNotNull(pair.getName());
     }
 
     @Test
     public void setFees(){
         var pairName = "USDEUR";
-        var fee = BigDecimal.valueOf(0.03d);
+        var fee = BigDecimal.valueOf(0.04d).setScale(APP_MONEY_SCALE);
 
         var request = new SetFeeReq(pairName, fee);
         request.setReqId(Long.MAX_VALUE);
         restTemplate.put(getApiURI() + "fees", request);
 
         GetCurrencyPairsResp response = restTemplate.getForObject(getApiURI() + "pairs", GetCurrencyPairsResp.class);
-        var pair = response.getCurrencyPairByName(pairName);
-        Assert.assertEquals(fee, pair.getFee());
+        assertThat(response.getResult())
+                .extracting(CurrencyPairDto::getName, CurrencyPairDto::getFee)
+                .containsAnyOf(
+                        tuple(pairName, fee)
+                );
     }
 
     @Test
@@ -66,12 +76,13 @@ public class CurrencyPairIT extends AbstractCurrencyCalcApplicationTest{
         request.setPairName("USDEUR");
         request.setReqId(Long.MAX_VALUE);
         ConversationResp response = restTemplate.postForObject(getApiURI() + "conversion", request, ConversationResp.class);
+
         var convInfo = response.getResult();
-        Assert.assertNotNull(convInfo.getAmount());
-        Assert.assertNotNull(convInfo.getFee());
+        assertNotNull(convInfo.getAmount());
+        assertNotNull(convInfo.getFee());
 
         var resultAmount = amount.multiply(convInfo.getRate().subtract(convInfo.getFee())).setScale(APP_MONEY_SCALE, RoundingMode.HALF_EVEN);
-        Assert.assertEquals(resultAmount, convInfo.getAmount());
+        assertEquals(resultAmount, convInfo.getAmount());
     }
 
     @Test
@@ -83,8 +94,8 @@ public class CurrencyPairIT extends AbstractCurrencyCalcApplicationTest{
         ErrResp response = restTemplate.postForObject(getApiURI() + "conversion", request, ConversationResp.class);
 
         var err = response.getErr();
-        Assert.assertNotNull(err.getMsg());
-        Assert.assertEquals(err.getCode(), AppExceptionKind.CURRENCY_PAIR_NOT_FOUND.getCode());
+        assertNotNull(err.getMsg());
+        assertEquals(err.getCode(), AppExceptionKind.CURRENCY_PAIR_NOT_FOUND.getCode());
     }
 
 }

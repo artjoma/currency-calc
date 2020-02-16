@@ -14,7 +14,7 @@ public class CurrencyRepo{
 
     @PostConstruct
     public void init(){
-        storage = new HashSet<>(100);
+        storage = new HashSet<>(256);
     }
 
     //return false if currency already registered

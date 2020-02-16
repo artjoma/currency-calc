@@ -11,4 +11,7 @@ Run:
 For local development:
 * ` npm start `
 * ` sh local-nginx.sh ` 
-* open: http://127.0.0.1/
+* open: http://127.0.0.1:81/
+
+
+Stop Node: ` killall node `
