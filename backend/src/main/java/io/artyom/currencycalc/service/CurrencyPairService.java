@@ -56,9 +56,8 @@ public class CurrencyPairService {
                 }
             }
         }
+
         log.info("currency pairs count:{}, currency count:{}", currencyPairRepo.count(), currencyService.count());
-
-
     }
 
     //result = amount X (rate - fee)
